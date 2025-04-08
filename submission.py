@@ -261,10 +261,18 @@ def part2_harmonic_inst(duration: float,
     for the duration in seconds, with zero phase offset, shaped by the provided envelopes.
     The number of harmonics generated matches the length of the envelopes passed in.
     The final audio is then shaped with the optional provided overall_env, as in part2_inst.
+
+
+    2.4) test_part2_harmonic_inst (test.Project2) (0/0.4)
+        Test Failed: np.float64(0.0370490136570926) not less than 1e-05 : Returned audio is incorrect
     """
 
     # pitch to base frequency
-    freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
+
+    # call built in pyquist helpers: pitchtofrequency()
+
+    freq_base = pq.pitch_to_frequency(pitch)
+    # freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
 
     n_samples = int(np.floor(duration * sample_rate))
     
@@ -275,11 +283,7 @@ def part2_harmonic_inst(duration: float,
     total_wave = np.zeros(n_samples, dtype=float)
 
     for i, env in enumerate(harmonic_envs):
-        harmonic_freq = i * freq_base
-        wave = np.sin(2 * np.pi * harmonic_freq * t)
-        env_vals = env(t).flatten() 
-        wave *= env_vals
-        total_wave += wave
+        total_wave += part2_inst(duration, pq.frequency_to_pitch(freq_base * (i + 1)), env, sample_rate=sample_rate)
 
     if overall_env is not None:
         total_wave *= overall_env(t)
@@ -319,6 +323,7 @@ def part2_harmonic_score(times: np.ndarray,
 
     score = []
 
+
     # same as part 1 stuff
     for t, dur, pit in zip(times, durations, pitches):
         event = (t, part2_harmonic_inst,
@@ -330,6 +335,16 @@ def part2_harmonic_score(times: np.ndarray,
                 }
         )
         score.append(event)
+    
+    '''
+    from stackoverflow:
+
+    try:
+        ax.set_ylim([y.min()-0.05, y.max()+0.05])
+    except ValueError:  #raised if `y` is empty.
+        pass
+    '''
+
     return score
 
 
