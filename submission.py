@@ -424,38 +424,38 @@ def part4_rand(rhythm: np.ndarray,
     assert len(rhythm) == len(chords), "Chords and rhythm must have same length"
 
     score = []
-    current_beat = 0.0  
-
-    # loop over each chord event with its duration (unit: beats)
+    current_beat = 0.0
+    
+    # Loop over each chord event with its duration (unit: beats)
     for chord_event, chord_duration in zip(chords, rhythm):
         chord_root, chord_type = chord_event
-
-        # random pattern for chord using with random_state
+        
+        # Select a random pattern for this chord event (exactly one call)
         pattern_list = chord_map[chord_type]
         pattern_index = int(random_state.rand() * len(pattern_list))
         chosen_pattern = pattern_list[pattern_index]
-
-        # find # notes that fit in this chord event
+        
+        # Number of notes that fit in this chord event
         num_notes = int(chord_duration / duration)
-
-        # convert chrod's pitch to a number 
+        
+        # conver chord root pitch to number
         root_pitch = pqh.pitch_name_to_pitch(chord_root)
-
-        # cycle through chosen pattern 
+        
         for j in range(num_notes):
             note_pitch = root_pitch + chosen_pattern[j % len(chosen_pattern)]
-
-            # onset of is the chord event start + how far we've gotten 
+            
+            # note onset in beats is the current beat plus the note's offset
             note_onset_beat = current_beat + j * duration
-
-            # convert beats to to seconds by metronome
-            note_onset_sec = metronome.beat_to_time(note_onset_beat)
-            note_duration_sec = metronome.beat_to_time(duration)
-
+            
+            # convert beat time to seconds—explicitly cast to float
+            note_onset_sec = float(metronome.beat_to_time(note_onset_beat))
+            note_duration_sec = float(metronome.beat_to_time(duration))
+            
             event = (note_onset_sec, inst, {"duration": note_duration_sec, "pitch": note_pitch})
             score.append(event)
-
+        
         current_beat += chord_duration
+    
     return score
 
 
@@ -678,8 +678,8 @@ if __name__ == "__main__":
 
     ### TASK 1: Basic Instrument
     audio_unit = part1_inst(0.5, pqh.pitch_name_to_pitch("c4"))
-    # play(audio_unit)
-    # audio_unit.write("part1_inst.wav")
+    play(audio_unit)
+    audio_unit.write("part1_inst.wav")
 
 
     ### TASK 1: Score with Basic Instrument
@@ -690,8 +690,8 @@ if __name__ == "__main__":
     metronome = BasicMetronome(120)
     score_handcrafted = part1_score(onset_beats, durations, pitches, part1_inst)
     audio_handcrafted = render_score(score_handcrafted, metronome)
-    # play(audio_handcrafted)
-    # audio_handcrafted.write("part1_score.wav")
+    play(audio_handcrafted)
+    audio_handcrafted.write("part1_score.wav")
     
 
     ### TASK 2: Envelope-shaped Instrument
@@ -746,8 +746,8 @@ if __name__ == "__main__":
     def harmony_harmonic_inst(*args, **kwargs): return 0.12 * part2_harmonic_inst(*args, **kwargs, harmonic_envs=ref_envelopes_pluck)
     score_cover = part3_cover(song_info[1], song_info[2], melody_harmonic_inst, harmony_harmonic_inst, rolled=0.25)
     audio_cover = render_score(score_cover, song_info[0])
-    #play(audio_cover)
-    #audio_cover.write("part3_cover.wav")
+    play(audio_cover)
+    audio_cover.write("part3_cover.wav")
 
 
     ### TASK 4: Random Generation
@@ -770,14 +770,14 @@ if __name__ == "__main__":
                             duration=0.5,
                             random_state=np.random.RandomState(1))
     audio_rand = render_score(score_rand, rand_metronome)
-    # play(audio_rand)
-    # audio_rand.write("part4_rand.wav")
+    play(audio_rand)
+    audio_rand.write("part4_rand.wav")
 
 
     ### TASK 5: Composition
     audio_composition = part5_composition()
-    # play(audio_composition)
-    # audio_composition.write("part5_composition.wav")
+    play(audio_composition)
+    audio_composition.write("part5_composition.wav")
 
     # Run this once before submitting the assignment; comment out when complete
     permission_quiz()
