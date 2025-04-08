@@ -8,12 +8,15 @@ from pyquist.web.theorytab import fetch_theorytab_json, theorytab_json_to_score
 from pyquist.score import Score, PlayableScore, render_score, BasicMetronome, Instrument
 from pyquist.web.freesound import fetch
 
+from collections import defaultdict
+
 import json
 
 
 
 def part1_inst(duration: float, pitch: float, sample_rate: int = 44100) -> pq.Audio:
-    """Generates a sine wave at the requested pitch and sample_rate,
+    """
+    Generates a sine wave at the requested pitch and sample_rate,
     for the duration in seconds, with zero phase offset.
 
     For durations which do not evenly combine with sample_rate, floor the
@@ -25,7 +28,7 @@ def part1_inst(duration: float, pitch: float, sample_rate: int = 44100) -> pq.Au
     freq = pqh.pitch_to_frequency(pitch)
 
 
-    # pitch to hz frequency (by random formula on the internet)
+    # pitch to hz frequency (by formula)
     # freq = 440.0 * 2 ** ((pitch - 69) / 12.0)  
 
     # number of samples (flooring in case we have a fraction)
@@ -65,7 +68,7 @@ def part1_score(times: np.ndarray, durations: np.ndarray, pitches: np.ndarray, i
 
 
 class Envelope:
-    """a linearly interpolating envelope."""
+    """linearly interpolating envelope."""
 
     def __init__(self, times: np.ndarray, values: np.ndarray):
         if not np.all(np.diff(times) > 0):
@@ -87,13 +90,11 @@ class Envelope:
         if not np.all(np.diff(t) > 0):
             raise ValueError("Query times must be sorted and unique.")
         
-        # determine segment index for each value in t::
-        # from internet: np.searchsorted(..., side='right') gives the insertion 
-        # index, so subtract 1 to find which segment we are in.
+        # get segment index for each value in t::
+        # from internet: np.searchsorted(..., side='right') gives index 
         idx = np.searchsorted(self.times, t, side='right') - 1
         
 
-        # final output array
         out = np.zeros_like(t, dtype=float)
         
         # find points that fall before first segment, within valid segments,
@@ -108,24 +109,24 @@ class Envelope:
         # right side (beyond the latest time)
         out[mask_right] = self.values[-1]
         
-        # mid range (piecewise linear interpolation)
-        j = idx[mask_mid]                  # segment index
-        x0 = self.times[j]                 # left time
-        x1 = self.times[j + 1]             # right time
-        y0 = self.values[j]                # left value
-        y1 = self.values[j + 1]            # right value
-        x = t[mask_mid]                    # query times in this segment
+        # piecewise linear interpolation
+        j = idx[mask_mid]           # segment index
+        x0 = self.times[j]          # left time
+        x1 = self.times[j + 1]      # right time
+        y0 = self.values[j]         # left value
+        y1 = self.values[j + 1]     # right value
+        x = t[mask_mid]             # query times in this segment
         
-        # Linear interpolation formula:
+
         # y = y0 + ( (x - x0) * (y1 - y0) / (x1 - x0) )
         out[mask_mid] = y0 + ( (x - x0) * (y1 - y0) / (x1 - x0) )
-        
         return out
     
 
 
 def part2_inst(duration: float, pitch: float, env: Envelope, sample_rate: int = 44100) -> pq.Audio:
-    """Generates a sine wave at the requested pitch and sample_rate,
+    """
+    Generates a sine wave at the requested pitch and sample_rate,
     for the duration in seconds, with zero phase offset, shaped by the provided envelope.
 
     For durations which do not evenly combine with sample_rate, floor the
@@ -194,7 +195,8 @@ def part2_score(times: np.ndarray,
 
 
 def get_harmonic_envelopes(audio: pq.Audio, num_harmonics: int = 8, hop_length: int = 512, debug_plot = False) -> List[Envelope]:
-    """Returns the harmonic presence in the audio, shape num_harmonics x
+    """
+    Returns the harmonic presence in the audio, shape num_harmonics x
     ceil(audio length / hop_length).
     
     Debug_plot parameter controls whether or not to save spectra_*.png and
@@ -305,7 +307,8 @@ def part2_harmonic_score(times: np.ndarray,
                 pitches: np.ndarray,
                 ref_audio: pq.Audio,
                 num_harmonics: int = 8) -> PlayableScore:
-    """Generates a PlayableScore containing the specified sound events,
+    """
+    Generates a PlayableScore containing the specified sound events,
     utilizing the timbre from ref_audio. Times and durations are in seconds,
     pitches is in steps.
 
@@ -356,7 +359,8 @@ def part3_cover(melody: Score,
                 melody_inst: Instrument,
                 harmony_inst: Instrument,
                 rolled: float = 0) -> PlayableScore:
-    """Combined the provided melody and harmony scores into a single, sorted,
+    """
+    Combined the provided melody and harmony scores into a single, sorted,
     PlayableScore. Chords occuring in harmony are converted from block to rolled
     chords, with each note therein being cummulatively delayed from low to high
     pitches by the rolled parameter.
@@ -368,7 +372,6 @@ def part3_cover(melody: Score,
     Returns: The constructed score.
     """
 
-    from collections import defaultdict
 
 
     assert rolled >= 0, "Rolled duration must be non-negative"
@@ -401,19 +404,18 @@ def part3_cover(melody: Score,
     # for each chord sort by pitch and add delays.
     for onset, events in groups.items():
 
-        # sort events by the 'pitch' value from kwargs (lowest to highest)
+        # sort events by the pitch (lowest to highest)
         sorted_events = sorted(events, key=lambda ev: ev[1]['pitch'])
 
         for idx, (orig_onset, kwargs) in enumerate(sorted_events):
-            # add delay of rolled beats per note in the chord
+            # add delay for eachnote 
             new_onset = orig_onset + rolled * idx
             new_harmony.append((new_onset, harmony_inst, kwargs.copy()))
 
-    # combine melody and modified harmony events.
     combined = new_melody + new_harmony
-    # sort the combined score by onset time.
+
+    # sort total score by onset time.
     combined_sorted = sorted(combined, key=lambda ev: ev[0])
-    
     return combined_sorted
 
 
@@ -426,7 +428,8 @@ def part4_rand(rhythm: np.ndarray,
                 metronome: BasicMetronome,
                 duration: float,
                 random_state: np.random.RandomState) -> PlayableScore:
-    """Generates an arpeggiated melody, with patterns randomly selected per
+    """
+    Generates an arpeggiated melody, with patterns randomly selected per
     chord according to random_state. Rhythm and duration are both in beats; when
     instantiating playable sound events with the provided instrument and
     duration, take care to convert this duration to seconds.
@@ -444,45 +447,40 @@ def part4_rand(rhythm: np.ndarray,
     seconds_per_beat = 60.0 / metronome.bpm
 
     score = []
-    current_beat = 0.0  # cumulative beat offset in BEATS
+    current_beat = 0.0  
 
     for chord_event, chord_duration in zip(chords, rhythm):
         chord_root, chord_type = chord_event
 
-        # Randomly select one pattern from chord_map[chord_type]
+    
         pattern_list = chord_map[chord_type]
         pattern_index = int(random_state.rand() * len(pattern_list))
         chosen_pattern = pattern_list[pattern_index]
 
-        # Number of notes that fit in this chord event
         num_notes = int(chord_duration / duration)
 
-        # Convert chord root pitch name (e.g. "c4") to a pitch number
+        # chord root to pitch
         root_pitch = pqh.pitch_name_to_pitch(chord_root)
 
         for j in range(num_notes):
-            # Index into the chosen pattern
             pattern_idx = j % len(chosen_pattern)
             note_pitch = root_pitch + chosen_pattern[pattern_idx]
 
-            # The onset in *beats* for this note
+            # onset in BEATS 
             note_onset_beat = current_beat + j * duration
 
-            # Convert the note's duration from beats to seconds for the 'duration' kwarg
+            # convert note duration from beats to seconds
             note_duration_sec = duration * seconds_per_beat
 
-            # Store the onset as beats in the event tuple, not seconds
             event = (
-                note_onset_beat,     # <-- in beats
+                note_onset_beat,     
                 inst,
                 {
-                    "duration": note_duration_sec,  # in seconds
+                    "duration": note_duration_sec,  
                     "pitch": note_pitch
                 }
             )
             score.append(event)
-
-        # Advance the current beat by the chord's total duration (in beats)
         current_beat += chord_duration
     return score
 
@@ -490,7 +488,8 @@ def part4_rand(rhythm: np.ndarray,
 
 
 def part5_composition() -> pq.Audio:
-    """Create a composition using one or more songs from your choice in
+    """
+    Create a composition using one or more songs from your choice in
     TheoryTab. TheoryTab data and FreeSound audio should be loaded from the
     "data/" directory, rather than using network requests.
 
@@ -709,7 +708,7 @@ if __name__ == "__main__":
     ### TASK 1: Basic Instrument
     audio_unit = part1_inst(0.5, pqh.pitch_name_to_pitch("c4"))
     # play(audio_unit)
-    # audio_unit.write("part1_inst.wav")
+    audio_unit.write("part1_inst.wav")
 
 
     ### TASK 1: Score with Basic Instrument
@@ -721,21 +720,21 @@ if __name__ == "__main__":
     score_handcrafted = part1_score(onset_beats, durations, pitches, part1_inst)
     audio_handcrafted = render_score(score_handcrafted, metronome)
     # play(audio_handcrafted)
-    # audio_handcrafted.write("part1_score.wav")
+    audio_handcrafted.write("part1_score.wav")
     
 
     ### TASK 2: Envelope-shaped Instrument
     adsr = Envelope(np.array([0, 0.2, 0.3, 0.5, 1]), np.array([0, 1, 0.6, 0.6, 0]))
     audio_adsr = part2_inst(1, pqh.pitch_name_to_pitch("c4"), adsr)
     # play(audio_adsr)
-    # audio_adsr.write("part2_adsr.wav")
+    audio_adsr.write("part2_adsr.wav")
 
 
     ### TASK 2: Score with Envelope-shaped Instrument
     handcrafted_env = Envelope(np.array([0, 0.01, 0.02, 0.08, 0.1]), np.array([0, 1, 0.8, 0.8, 0]))
     score_handcrafted_env = part2_score(onset_beats, durations, pitches, handcrafted_env, part2_inst)
     audio_handcrafted_env = render_score(score_handcrafted_env, metronome)
-    play(audio_handcrafted_env)
+    # play(audio_handcrafted_env)
     audio_handcrafted_env.write("part2_score_env.wav")
 
     
@@ -755,14 +754,14 @@ if __name__ == "__main__":
     ref_envelopes_trumpet = get_harmonic_envelopes(trumpet_audio)
     ref_envelopes_pluck = get_harmonic_envelopes(pluck_audio)
     audio_harmonic = part2_harmonic_inst(1, pqh.pitch_name_to_pitch("c4"), ref_envelopes_recorder)
-    play(audio_harmonic)
+    # play(audio_harmonic)
     audio_harmonic.write("part2_harmonic.wav")
 
 
     ### TASK 2: Score with Harmonic Instrument
     harmonic_score = part2_harmonic_score(onset_beats, slow_durations, pitches, recorder_audio)
     audio_harmonic_score = render_score(harmonic_score, slow_metronome)
-    play(audio_harmonic_score)
+    # play(audio_harmonic_score)
     audio_harmonic_score.write("part2_harmonic_score.wav")
 
     
@@ -776,7 +775,7 @@ if __name__ == "__main__":
     def harmony_harmonic_inst(*args, **kwargs): return 0.12 * part2_harmonic_inst(*args, **kwargs, harmonic_envs=ref_envelopes_pluck)
     score_cover = part3_cover(song_info[1], song_info[2], melody_harmonic_inst, harmony_harmonic_inst, rolled=0.25)
     audio_cover = render_score(score_cover, song_info[0])
-    play(audio_cover)
+    # play(audio_cover)
     audio_cover.write("part3_cover.wav")
 
 
@@ -800,13 +799,13 @@ if __name__ == "__main__":
                             duration=0.5,
                             random_state=np.random.RandomState(1))
     audio_rand = render_score(score_rand, rand_metronome)
-    play(audio_rand)
+    # play(audio_rand)
     audio_rand.write("part4_rand.wav")
 
 
     ### TASK 5: Composition
     audio_composition = part5_composition()
-    play(audio_composition)
+    # play(audio_composition)
     audio_composition.write("part5_composition.wav")
 
     # Run this once before submitting the assignment; comment out when complete

@@ -34,6 +34,11 @@ Project feedback and pain points:
     entire project to get autograder feedback. Also making the autograder feedback 
     more thorough/verbose/provide suggestions for where to start debugging. 
 
+- Overall I think this was a good idea for an assignment, and I'd guess that if 
+    we had consistently used the pyquist/this entire setup throughout the semester,
+    it would have gone a lot faster. I also think this assignment was a bit long, 
+    and it felt like part 2 particularly was really long (with 4 subparts). 
+
 
 
 Time spent per task:
@@ -42,7 +47,7 @@ Time spent per task:
                         ended up just having to delete and restart my virtual env
                         and reinstall all the libraries)
 - Task 1: 1 hr
-- Task 2: 2 hr
+- Task 2: 2.5 hr (harmonizer took a long time)
 - Task 3: 2 hr (took a while to understand the whole json thing)
-- Task 4: 1 hr
-- Task 5: 2 hr
+- Task 4: 2 hr
+- Task 5: 2.5 hr
