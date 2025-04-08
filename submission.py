@@ -263,32 +263,34 @@ def part2_harmonic_inst(duration: float,
     The final audio is then shaped with the optional provided overall_env, as in part2_inst.
     """
 
-    # pitch to freq
+    # pitch to base frequency
     freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
 
     n_samples = int(np.floor(duration * sample_rate))
     
-    # time array
+    # time vector
     t = np.arange(n_samples) / sample_rate
 
     # init waveform
     total_wave = np.zeros(n_samples, dtype=float)
 
-    # generate sine wave for each harmonic, modulate with envelope.
+    # Sum up each harmonic's sine wave modulated by its envelope.
     for i, env in enumerate(harmonic_envs):
         harmonic_freq = (i + 1) * freq_base
         wave = np.sin(2 * np.pi * harmonic_freq * t)
-        # Evaluate the envelope (make sure it's 1D)
-        env_vals = env(t).flatten()
+        env_vals = env(t).flatten()  # Ensure envelope values are 1D
         wave *= env_vals
         total_wave += wave
 
     if overall_env is not None:
         total_wave *= overall_env(t)
 
-    total_wave = 0.4 * total_wave
+    peak = np.max(np.abs(total_wave))
+    if peak > 0:
+        total_wave = total_wave * (0.4 / peak)
 
     return pq.Audio.from_array(total_wave, sample_rate=sample_rate)
+
 
 
 def part2_harmonic_score(times: np.ndarray,
