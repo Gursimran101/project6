@@ -1,0 +1,41 @@
+Composition intent and description:
+- My goal with this was to create a really annoying but not totally predictable
+    sound. To accomplish this, I needed it to start off normal/consistent (with
+    the calming piano background to put the listener at ease), but a slight 
+    annoyance (me saying hello repeatedly in the background) that seems to get 
+    more annoying as the composition goes on. To interrupt the monotonous sound/
+    consistent pattern, I added in the cash register noises and the part 4 
+    arrpeggiated section. Also I kinda sound like that one BEN10 character, 
+    which I included after watching 2 hours of Ben10 tiktok edits on tiktok 
+    for some reason. Although this is only a 40 second sound, if you listened
+    to it on loop for about 15-20 minutes like I did, it really does get quite
+    annoying (especially the hello noises in the background). 
+
+
+FreeSound attributions:
+- piano_loop.mp3, https://freesound.org/people/josefpres/sounds/795782/, josefpres
+- cash_register.mp3, https://freesound.org/people/kiddpark/sounds/201159/, kiddpark
+
+Project feedback and pain points:
+- I think a bit more scaffolding could have been provided. At a lot of points,
+    I found myself a bit confused about how to go about completing the function. 
+    The descriptions were very helpful, but a bit of helper code, especially when
+    it comes to using specific numpy/pyquist things would go a long way. I spent
+    a lot of time digging through/summarizing/reading about numpy and pyquist 
+    resources, and at times I felt like I was just trying to plug in random/obscure
+    helper functions that I didn't fully understand but thought would work. 
+
+- Providing a bit more troubleshooting would be helpful - I spent several hours 
+    dealing with a "module does not exist" 
+
+
+Time spent per task:
+- Project set up: 2 hr (initial setup was very easy, but I spent a long time 
+                        dealing with a "module not found: librosa" error and 
+                        ended up just having to delete and restart my virtual env
+                        and reinstall all the libraries)
+- Task 1: 1 hr
+- Task 2: 2 hr
+- Task 3: 2 hr (took a while to understand the whole json thing)
+- Task 4: 1 hr
+- Task 5: 2 hr
