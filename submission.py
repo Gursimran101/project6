@@ -268,30 +268,24 @@ def part2_harmonic_inst(duration: float, pitch: float, harmonic_envs: List[Envel
 
     assert len(harmonic_envs) > 0, "At least one harmonic envelope must be provided"
 
-    # pitch -> frequency in hz from some internet formula 
+    # pitch to frequency
     freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
 
-    # samples
-    n_samples = int(duration * sample_rate)
+    n_samples = int(np.floor(duration * sample_rate))
+    
+    # time array 
+    t = np.arange(n_samples) / sample_rate
 
-    # time array
-    t = np.linspace(0.0, duration, n_samples, endpoint=False)
-
-    # add each 
+    # initialize waveform
     total_wave = np.zeros(n_samples, dtype=float)
 
+    # compute the sine wave at (i+1)*freq and modulate by the corresponding envelope.
     for i, env in enumerate(harmonic_envs):
-        # harmonic freq = (i+1) * base freq
-        freq = (i + 1) * freq_base
-        wave = np.sin(2 * np.pi * freq * t)
-        
-        # mult in harmonic envelope
+        harmonic_freq = (i + 1) * freq_base
+        wave = np.sin(2 * np.pi * harmonic_freq * t)
         wave *= env(t)
-        
-        # add to overall wave
         total_wave += wave
 
-    # shape with overall_env
     if overall_env is not None:
         total_wave *= overall_env(t)
 
@@ -703,16 +697,16 @@ if __name__ == "__main__":
     ### TASK 2: Envelope-shaped Instrument
     adsr = Envelope(np.array([0, 0.2, 0.3, 0.5, 1]), np.array([0, 1, 0.6, 0.6, 0]))
     audio_adsr = part2_inst(1, pqh.pitch_name_to_pitch("c4"), adsr)
-    #play(audio_adsr)
-    #audio_adsr.write("part2_adsr.wav")
+    play(audio_adsr)
+    audio_adsr.write("part2_adsr.wav")
 
 
     ### TASK 2: Score with Envelope-shaped Instrument
     handcrafted_env = Envelope(np.array([0, 0.01, 0.02, 0.08, 0.1]), np.array([0, 1, 0.8, 0.8, 0]))
     score_handcrafted_env = part2_score(onset_beats, durations, pitches, handcrafted_env, part2_inst)
     audio_handcrafted_env = render_score(score_handcrafted_env, metronome)
-    #play(audio_handcrafted_env)
-    #audio_handcrafted_env.write("part2_score_env.wav")
+    play(audio_handcrafted_env)
+    audio_handcrafted_env.write("part2_score_env.wav")
 
     
     ### TASK 2: Harmonic Instrument
@@ -731,15 +725,15 @@ if __name__ == "__main__":
     ref_envelopes_trumpet = get_harmonic_envelopes(trumpet_audio)
     ref_envelopes_pluck = get_harmonic_envelopes(pluck_audio)
     audio_harmonic = part2_harmonic_inst(1, pqh.pitch_name_to_pitch("c4"), ref_envelopes_recorder)
-    #play(audio_harmonic)
-    #audio_harmonic.write("part2_harmonic.wav")
+    play(audio_harmonic)
+    audio_harmonic.write("part2_harmonic.wav")
 
 
     ### TASK 2: Score with Harmonic Instrument
     harmonic_score = part2_harmonic_score(onset_beats, slow_durations, pitches, recorder_audio)
     audio_harmonic_score = render_score(harmonic_score, slow_metronome)
-    #play(audio_harmonic_score)
-    #audio_harmonic_score.write("part2_harmonic_score.wav")
+    play(audio_harmonic_score)
+    audio_harmonic_score.write("part2_harmonic_score.wav")
 
     
     ### TASK 3: Song Cover
@@ -782,8 +776,8 @@ if __name__ == "__main__":
 
     ### TASK 5: Composition
     audio_composition = part5_composition()
-    play(audio_composition)
-    audio_composition.write("part5_composition.wav")
+    # play(audio_composition)
+    # audio_composition.write("part5_composition.wav")
 
     # Run this once before submitting the assignment; comment out when complete
     permission_quiz()
