@@ -296,10 +296,6 @@ Test Failed: non-broadcastable output operand with shape (72000,) doesn't match 
     if overall_env is not None:
         total_wave *= overall_env(t)
 
-    peak = np.max(np.abs(total_wave))
-    if peak > 0:
-        total_wave = total_wave * (0.4 / peak)
-
     return pq.Audio.from_array(total_wave, sample_rate=sample_rate)
 
 
