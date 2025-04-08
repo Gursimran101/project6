@@ -11,6 +11,7 @@ from pyquist.web.freesound import fetch
 import json
 
 
+
 def part1_inst(duration: float, pitch: float, sample_rate: int = 44100) -> pq.Audio:
     """Generates a sine wave at the requested pitch and sample_rate,
     for the duration in seconds, with zero phase offset.
@@ -20,8 +21,12 @@ def part1_inst(duration: float, pitch: float, sample_rate: int = 44100) -> pq.Au
     
     Returns: The generated signal.
     """
+
+    freq = pqh.pitch_to_frequency(pitch)
+
+
     # pitch to hz frequency (by random formula on the internet)
-    freq = 440.0 * 2 ** ((pitch - 69) / 12.0)  
+    # freq = 440.0 * 2 ** ((pitch - 69) / 12.0)  
 
     # number of samples (flooring in case we have a fraction)
     num_samples = int(np.floor(duration * sample_rate))
@@ -75,10 +80,10 @@ class Envelope:
     
     def __call__(self, t: np.ndarray) -> np.ndarray:
         """
-        render specified t values from the piecewise times and values from init - 
+        specified t values from the piecewise times and values from init - 
         t values outside the range of self.times are set to the nearest endpoint
         """
-        # check t strictly increasing
+        # t should be strictly increasing
         if not np.all(np.diff(t) > 0):
             raise ValueError("Query times must be sorted and unique.")
         
@@ -87,10 +92,11 @@ class Envelope:
         # index, so subtract 1 to find which segment we are in.
         idx = np.searchsorted(self.times, t, side='right') - 1
         
-        # prepare an output array of the same shape as t
+
+        # final output array
         out = np.zeros_like(t, dtype=float)
         
-        # identify which points fall before first segment, within valid segments,
+        # find points that fall before first segment, within valid segments,
         # or after last segment
         mask_left = idx < 0
         mask_right = idx >= len(self.times) - 1
@@ -148,6 +154,8 @@ def part2_inst(duration: float, pitch: float, env: Envelope, sample_rate: int = 
 
     # multiply through to shape
     shaped_wave = wave * env_values
+
+    # from_array casts to 32 bit float
     return pq.Audio.from_array(shaped_wave, sample_rate=sample_rate)
 
 
@@ -263,15 +271,15 @@ def part2_harmonic_inst(duration: float,
     The final audio is then shaped with the optional provided overall_env, as in part2_inst.
 
 
-    2.4) test_part2_harmonic_inst (test.Project2) (0/0.4)
-        Test Failed: np.float64(0.0370490136570926) not less than 1e-05 : Returned audio is incorrect
+2.4) test_part2_harmonic_inst (test.Project2) (0/0.4)
+Test Failed: non-broadcastable output operand with shape (72000,) doesn't match the broadcast shape (72000,72000)
     """
 
     # pitch to base frequency
 
     # call built in pyquist helpers: pitchtofrequency()
 
-    freq_base = pq.pitch_to_frequency(pitch)
+    freq_base = pqh.pitch_to_frequency(pitch)
     # freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
 
     n_samples = int(np.floor(duration * sample_rate))
@@ -280,10 +288,10 @@ def part2_harmonic_inst(duration: float,
     t = np.arange(n_samples) / sample_rate
 
     # init waveform
-    total_wave = np.zeros(n_samples, dtype=float)
+    total_wave = np.zeros(n_samples, dtype=np.float32)
 
     for i, env in enumerate(harmonic_envs):
-        total_wave += part2_inst(duration, pq.frequency_to_pitch(freq_base * (i + 1)), env, sample_rate=sample_rate)
+        total_wave += part2_inst(duration, pqh.frequency_to_pitch(freq_base * (i + 1)), env, sample_rate=sample_rate).flatten()
 
     if overall_env is not None:
         total_wave *= overall_env(t)
@@ -344,7 +352,6 @@ def part2_harmonic_score(times: np.ndarray,
     except ValueError:  #raised if `y` is empty.
         pass
     '''
-
     return score
 
 
@@ -441,9 +448,9 @@ def part4_rand(rhythm: np.ndarray,
     seconds_per_beat = 60.0 / metronome.bpm
     
     score = []
-    current_beat = 0.0  # cumulative beat count
+    current_beat = 0.0 
 
-    # loop chord event with duration
+
     for chord_event, chord_duration in zip(chords, rhythm):
         chord_root, chord_type = chord_event
 
@@ -454,22 +461,22 @@ def part4_rand(rhythm: np.ndarray,
 
         # number of notes that fit 
         num_notes = int(chord_duration / duration)
+
         # chord root to number
         root_pitch = pqh.pitch_name_to_pitch(chord_root)
 
         for j in range(num_notes):
             note_pitch = root_pitch + chosen_pattern[j % len(chosen_pattern)]
-            # Compute the onset in beats for this note
+            # onset (beats) for note
             note_onset_beat = current_beat + j * duration
-            # Convert onset and duration to seconds using seconds_per_beat
+
+            # onset and duration to seconds 
             note_onset_sec = note_onset_beat * seconds_per_beat
             note_duration_sec = duration * seconds_per_beat
 
-            # Create the event with onset, instrument, and keyword arguments
             event = (note_onset_sec, inst, {"duration": note_duration_sec, "pitch": note_pitch})
             score.append(event)
         
-        # Update the current beat by the chord's duration
         current_beat += chord_duration
 
     return score
@@ -695,8 +702,8 @@ if __name__ == "__main__":
 
     ### TASK 1: Basic Instrument
     audio_unit = part1_inst(0.5, pqh.pitch_name_to_pitch("c4"))
-    play(audio_unit)
-    audio_unit.write("part1_inst.wav")
+    # play(audio_unit)
+    # audio_unit.write("part1_inst.wav")
 
 
     ### TASK 1: Score with Basic Instrument
@@ -707,15 +714,15 @@ if __name__ == "__main__":
     metronome = BasicMetronome(120)
     score_handcrafted = part1_score(onset_beats, durations, pitches, part1_inst)
     audio_handcrafted = render_score(score_handcrafted, metronome)
-    play(audio_handcrafted)
-    audio_handcrafted.write("part1_score.wav")
+    # play(audio_handcrafted)
+    # audio_handcrafted.write("part1_score.wav")
     
 
     ### TASK 2: Envelope-shaped Instrument
     adsr = Envelope(np.array([0, 0.2, 0.3, 0.5, 1]), np.array([0, 1, 0.6, 0.6, 0]))
     audio_adsr = part2_inst(1, pqh.pitch_name_to_pitch("c4"), adsr)
-    play(audio_adsr)
-    audio_adsr.write("part2_adsr.wav")
+    # play(audio_adsr)
+    # audio_adsr.write("part2_adsr.wav")
 
 
     ### TASK 2: Score with Envelope-shaped Instrument
