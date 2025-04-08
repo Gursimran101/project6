@@ -252,45 +252,89 @@ def get_harmonic_envelopes(audio: pq.Audio, num_harmonics: int = 8, hop_length: 
 
 
 
-def part2_harmonic_inst(duration: float, pitch: float, harmonic_envs: List[Envelope],
-                        overall_env: Envelope = None, sample_rate: int = 44100) -> pq.Audio:
-    """Generates harmonics via sine waves at the requested pitch and sample_rate,
-    for the duration in seconds, with zero phase offset, shaped by the provided envelopes.
-    The number of harmonics generated matches the length of the envelopes passed in.
-    The final audio is then shaped with the optional provided overall_env, as in part2_inst.
+# def part2_harmonic_inst(duration: float, pitch: float, harmonic_envs: List[Envelope],
+#                         overall_env: Envelope = None, sample_rate: int = 44100) -> pq.Audio:
+#     """Generates harmonics via sine waves at the requested pitch and sample_rate,
+#     for the duration in seconds, with zero phase offset, shaped by the provided envelopes.
+#     The number of harmonics generated matches the length of the envelopes passed in.
+#     The final audio is then shaped with the optional provided overall_env, as in part2_inst.
 
 
-    For durations which do not evenly combine with sample_rate, floor the
-    resulting product.
+#     For durations which do not evenly combine with sample_rate, floor the
+#     resulting product.
     
-    Returns: The generated signal.
+#     Returns: The generated signal.
+#     """
+
+#     assert len(harmonic_envs) > 0, "At least one harmonic envelope must be provided"
+
+#     # pitch to frequency
+#     freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
+
+#     n_samples = int(np.floor(duration * sample_rate))
+    
+#     # time array 
+#     t = np.arange(n_samples) / sample_rate
+
+#     # initialize waveform
+#     total_wave = np.zeros(n_samples, dtype=float)
+
+#     # compute the sine wave at (i+1)*freq and modulate by the corresponding envelope.
+#     for i, env in enumerate(harmonic_envs):
+#         harmonic_freq = (i + 1) * freq_base
+#         wave = np.sin(2 * np.pi * harmonic_freq * t)
+#         wave *= env(t)
+#         total_wave += wave
+
+#     if overall_env is not None:
+#         total_wave *= overall_env(t)
+
+#     return pq.Audio.from_array(total_wave, sample_rate=sample_rate)
+
+def part2_harmonic_inst(duration: float,
+                        pitch: float,
+                        harmonic_envs: List[Envelope],
+                        overall_env: Envelope = None,
+                        sample_rate: int = 44100) -> pq.Audio:
     """
+    Generates multiple sine waves at integer multiples of pitch's base frequency,
+    each shaped by its corresponding harmonic envelope from harmonic_envs.
+    The final audio is optionally shaped by overall_env if provided.
+    This implementation normalizes the sum by dividing by the number of harmonics.
+    """
+    import numpy as np
 
-    assert len(harmonic_envs) > 0, "At least one harmonic envelope must be provided"
-
-    # pitch to frequency
+    # Convert pitch to a base frequency using the standard MIDI formula.
     freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
 
-    n_samples = int(np.floor(duration * sample_rate))
-    
-    # time array 
-    t = np.arange(n_samples) / sample_rate
+    # Determine the number of samples and create the time array.
+    n_samples = int(duration * sample_rate)
+    t = np.linspace(0.0, duration, n_samples, endpoint=False)
 
-    # initialize waveform
+    # Sum up each harmonic's sine wave, weighted by its envelope.
     total_wave = np.zeros(n_samples, dtype=float)
-
-    # compute the sine wave at (i+1)*freq and modulate by the corresponding envelope.
+    n_harmonics = len(harmonic_envs)
+    
     for i, env in enumerate(harmonic_envs):
-        harmonic_freq = (i + 1) * freq_base
-        wave = np.sin(2 * np.pi * harmonic_freq * t)
-        wave *= env(t)
+        # Each harmonic's frequency is (i+1) times the base frequency.
+        freq = (i + 1) * freq_base
+        wave = np.sin(2 * np.pi * freq * t)
+        # Multiply by the envelope for this harmonic.
+        env_vals = env(t)
+        # Ensure the envelope values are a one-dimensional array.
+        env_vals = env_vals.flatten()
+        wave *= env_vals
         total_wave += wave
 
+    # Normalize the total wave by the number of harmonics.
+    if n_harmonics > 0:
+        total_wave /= n_harmonics
+
+    # Optionally, apply the overall envelope if one is provided.
     if overall_env is not None:
         total_wave *= overall_env(t)
 
     return pq.Audio.from_array(total_wave, sample_rate=sample_rate)
-
 
 
 
@@ -420,43 +464,47 @@ def part4_rand(rhythm: np.ndarray,
     Returns: The constructed score.
     """
 
+    # Ensure that each rhythm value is an exact multiple of 'duration'
     assert all([x % duration == 0 for x in rhythm]), "Duration must evenly divide rhythms"
     assert len(rhythm) == len(chords), "Chords and rhythm must have same length"
-
-    score = []
-    current_beat = 0.0
     
-    # Loop over each chord event with its duration (unit: beats)
+    # Compute seconds per beat directly from BPM.
+    seconds_per_beat = 60.0 / metronome.bpm
+    
+    score = []
+    current_beat = 0.0  # cumulative beat count
+
+    # Loop over each chord event with its duration (in beats)
     for chord_event, chord_duration in zip(chords, rhythm):
         chord_root, chord_type = chord_event
-        
-        # Select a random pattern for this chord event (exactly one call)
+        # Select a random pattern for the chord (exactly one random call per chord)
         pattern_list = chord_map[chord_type]
         pattern_index = int(random_state.rand() * len(pattern_list))
         chosen_pattern = pattern_list[pattern_index]
-        
-        # Number of notes that fit in this chord event
+
+        # Determine the number of notes that fit in this chord event
         num_notes = int(chord_duration / duration)
-        
-        # conver chord root pitch to number
+        # Convert the chord root (string) to a pitch number
         root_pitch = pqh.pitch_name_to_pitch(chord_root)
-        
+
+        # For each note in the chord event:
         for j in range(num_notes):
             note_pitch = root_pitch + chosen_pattern[j % len(chosen_pattern)]
-            
-            # note onset in beats is the current beat plus the note's offset
+            # Compute the onset in beats for this note
             note_onset_beat = current_beat + j * duration
-            
-            # convert beat time to seconds—explicitly cast to float
-            note_onset_sec = float(metronome.beat_to_time(note_onset_beat))
-            note_duration_sec = float(metronome.beat_to_time(duration))
-            
+            # Convert onset and duration to seconds using seconds_per_beat
+            note_onset_sec = note_onset_beat * seconds_per_beat
+            note_duration_sec = duration * seconds_per_beat
+
+            # Create the event with onset, instrument, and keyword arguments
             event = (note_onset_sec, inst, {"duration": note_duration_sec, "pitch": note_pitch})
             score.append(event)
         
+        # Update the current beat by the chord's duration
         current_beat += chord_duration
-    
+
     return score
+
 
 
 def part5_composition() -> pq.Audio:
