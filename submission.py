@@ -274,11 +274,10 @@ def part2_harmonic_inst(duration: float,
     # init waveform
     total_wave = np.zeros(n_samples, dtype=float)
 
-    # Sum up each harmonic's sine wave modulated by its envelope.
     for i, env in enumerate(harmonic_envs):
-        harmonic_freq = (i + 1) * freq_base
+        harmonic_freq = i * freq_base
         wave = np.sin(2 * np.pi * harmonic_freq * t)
-        env_vals = env(t).flatten()  # Ensure envelope values are 1D
+        env_vals = env(t).flatten() 
         wave *= env_vals
         total_wave += wave
 
@@ -419,30 +418,30 @@ def part4_rand(rhythm: np.ndarray,
     Returns: The constructed score.
     """
 
-    # Ensure that each rhythm value is an exact multiple of 'duration'
+    # each rhythm value is exact multiple
     assert all([x % duration == 0 for x in rhythm]), "Duration must evenly divide rhythms"
     assert len(rhythm) == len(chords), "Chords and rhythm must have same length"
     
-    # Compute seconds per beat directly from BPM.
+    # seconds per beat from BPM
     seconds_per_beat = 60.0 / metronome.bpm
     
     score = []
     current_beat = 0.0  # cumulative beat count
 
-    # Loop over each chord event with its duration (in beats)
+    # loop chord event with duration
     for chord_event, chord_duration in zip(chords, rhythm):
         chord_root, chord_type = chord_event
-        # Select a random pattern for the chord (exactly one random call per chord)
+
+        # one random call per chord
         pattern_list = chord_map[chord_type]
         pattern_index = int(random_state.rand() * len(pattern_list))
         chosen_pattern = pattern_list[pattern_index]
 
-        # Determine the number of notes that fit in this chord event
+        # number of notes that fit 
         num_notes = int(chord_duration / duration)
-        # Convert the chord root (string) to a pitch number
+        # chord root to number
         root_pitch = pqh.pitch_name_to_pitch(chord_root)
 
-        # For each note in the chord event:
         for j in range(num_notes):
             note_pitch = root_pitch + chosen_pattern[j % len(chosen_pattern)]
             # Compute the onset in beats for this note
