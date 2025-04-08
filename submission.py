@@ -15,8 +15,7 @@ import json
 
 
 def part1_inst(duration: float, pitch: float, sample_rate: int = 44100) -> pq.Audio:
-    """
-    Generates a sine wave at the requested pitch and sample_rate,
+    """Generates a sine wave at the requested pitch and sample_rate,
     for the duration in seconds, with zero phase offset.
 
     For durations which do not evenly combine with sample_rate, floor the
@@ -68,11 +67,11 @@ def part1_score(times: np.ndarray, durations: np.ndarray, pitches: np.ndarray, i
 
 
 class Envelope:
-    """linearly interpolating envelope."""
+    """A linearly interpolating envelope."""
 
     def __init__(self, times: np.ndarray, values: np.ndarray):
         if not np.all(np.diff(times) > 0):
-            raise ValueError("Times must be strictly increasing.")
+            raise ValueError("Times must be sorted and unique.")
         if len(times) != len(values):
             raise ValueError("Times and values must have the same length.")
         if len(times) < 2:
@@ -82,14 +81,14 @@ class Envelope:
         self.values = values
     
     def __call__(self, t: np.ndarray) -> np.ndarray:
-        """
-        specified t values from the piecewise times and values from init - 
-        t values outside the range of self.times are set to the nearest endpoint
-        """
-        # t should be strictly increasing
-        if not np.all(np.diff(t) > 0):
-            raise ValueError("Query times must be sorted and unique.")
+        """Render the specified t values from the piecewise times and values defined.
         
+        t values outside the range of times should be padded with their nearest endpoint
+        """
+        if not np.all(np.diff(t) > 0):
+            raise ValueError("Times must be sorted and unique.")
+
+
         # get segment index for each value in t::
         # from internet: np.searchsorted(..., side='right') gives index 
         idx = np.searchsorted(self.times, t, side='right') - 1
@@ -125,8 +124,7 @@ class Envelope:
 
 
 def part2_inst(duration: float, pitch: float, env: Envelope, sample_rate: int = 44100) -> pq.Audio:
-    """
-    Generates a sine wave at the requested pitch and sample_rate,
+    """Generates a sine wave at the requested pitch and sample_rate,
     for the duration in seconds, with zero phase offset, shaped by the provided envelope.
 
     For durations which do not evenly combine with sample_rate, floor the
@@ -167,13 +165,16 @@ def part2_score(times: np.ndarray,
                 pitches: np.ndarray,
                 env: Envelope,
                 inst: Instrument) -> PlayableScore:
-    """
-    Generates a PlayableScore containing the specified sound events.
-    Times and durations are in seconds, pitches is in steps.
-    Utilize the provided instrument to shape the notes with the given env.
+    """Generates a PlayableScore containing the specified sound events. Times
+    and durations are in seconds, pitches is in steps.
+
+    Utilize the provided instrument when turning sound events into playable
+    sound events, ensuring the env parameter is passed along appropriately.
+    
+    Returns: The constructed score.
     """
 
-    assert len(times) == len(durations) == len(pitches), \
+    assert len(times) == len(durations) and len(durations) == len(pitches), \
         "Lengths of input arguments did not match"
 
     score = []
@@ -195,8 +196,7 @@ def part2_score(times: np.ndarray,
 
 
 def get_harmonic_envelopes(audio: pq.Audio, num_harmonics: int = 8, hop_length: int = 512, debug_plot = False) -> List[Envelope]:
-    """
-    Returns the harmonic presence in the audio, shape num_harmonics x
+    """Returns the harmonic presence in the audio, shape num_harmonics x
     ceil(audio length / hop_length).
     
     Debug_plot parameter controls whether or not to save spectra_*.png and
@@ -261,21 +261,24 @@ def get_harmonic_envelopes(audio: pq.Audio, num_harmonics: int = 8, hop_length: 
     return [Envelope(times, values) for values in envelopes]
 
 
-def part2_harmonic_inst(duration: float,
-                        pitch: float,
-                        harmonic_envs: List[Envelope],
-                        overall_env: Envelope = None,
-                        sample_rate: int = 44100) -> pq.Audio:
-    """
-    Generates harmonics via sine waves at the requested pitch and sample_rate,
+def part2_harmonic_inst(duration: float, pitch: float, harmonic_envs: List[Envelope],
+                        overall_env: Envelope = None, sample_rate: int = 44100) -> pq.Audio:
+    """Generates harmonics via sine waves at the requested pitch and sample_rate,
     for the duration in seconds, with zero phase offset, shaped by the provided envelopes.
     The number of harmonics generated matches the length of the envelopes passed in.
     The final audio is then shaped with the optional provided overall_env, as in part2_inst.
 
 
+    For durations which do not evenly combine with sample_rate, floor the
+    resulting product.
+    
+    Returns: The generated signal.
+
 2.4) test_part2_harmonic_inst (test.Project2) (0/0.4)
 Test Failed: non-broadcastable output operand with shape (72000,) doesn't match the broadcast shape (72000,72000)
     """
+
+    assert len(harmonic_envs) > 0, "At least one harmonic envelope must be provided"
 
     # pitch to base frequency
 
@@ -307,8 +310,7 @@ def part2_harmonic_score(times: np.ndarray,
                 pitches: np.ndarray,
                 ref_audio: pq.Audio,
                 num_harmonics: int = 8) -> PlayableScore:
-    """
-    Generates a PlayableScore containing the specified sound events,
+    """Generates a PlayableScore containing the specified sound events,
     utilizing the timbre from ref_audio. Times and durations are in seconds,
     pitches is in steps.
 
@@ -359,8 +361,7 @@ def part3_cover(melody: Score,
                 melody_inst: Instrument,
                 harmony_inst: Instrument,
                 rolled: float = 0) -> PlayableScore:
-    """
-    Combined the provided melody and harmony scores into a single, sorted,
+    """Combined the provided melody and harmony scores into a single, sorted,
     PlayableScore. Chords occuring in harmony are converted from block to rolled
     chords, with each note therein being cummulatively delayed from low to high
     pitches by the rolled parameter.
@@ -371,12 +372,7 @@ def part3_cover(melody: Score,
     
     Returns: The constructed score.
     """
-
-
-
     assert rolled >= 0, "Rolled duration must be non-negative"
-
-
 
     new_melody = []
     for event in melody:
@@ -428,8 +424,7 @@ def part4_rand(rhythm: np.ndarray,
                 metronome: BasicMetronome,
                 duration: float,
                 random_state: np.random.RandomState) -> PlayableScore:
-    """
-    Generates an arpeggiated melody, with patterns randomly selected per
+    """Generates an arpeggiated melody, with patterns randomly selected per
     chord according to random_state. Rhythm and duration are both in beats; when
     instantiating playable sound events with the provided instrument and
     duration, take care to convert this duration to seconds.
@@ -439,7 +434,6 @@ def part4_rand(rhythm: np.ndarray,
     Returns: The constructed score.
     """
 
-    # each rhythm value is exact multiple
     assert all([x % duration == 0 for x in rhythm]), "Duration must evenly divide rhythms"
     assert len(rhythm) == len(chords), "Chords and rhythm must have same length"
     
@@ -488,8 +482,7 @@ def part4_rand(rhythm: np.ndarray,
 
 
 def part5_composition() -> pq.Audio:
-    """
-    Create a composition using one or more songs from your choice in
+    """Create a composition using one or more songs from your choice in
     TheoryTab. TheoryTab data and FreeSound audio should be loaded from the
     "data/" directory, rather than using network requests.
 
