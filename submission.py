@@ -442,45 +442,49 @@ def part4_rand(rhythm: np.ndarray,
     
     
     seconds_per_beat = 60.0 / metronome.bpm
-    
+
     score = []
-    current_beat = 0.0 
+    current_beat = 0.0  # cumulative beat offset in BEATS
 
     for chord_event, chord_duration in zip(chords, rhythm):
         chord_root, chord_type = chord_event
 
-        # one random call per chord
+        # Randomly select one pattern from chord_map[chord_type]
         pattern_list = chord_map[chord_type]
         pattern_index = int(random_state.rand() * len(pattern_list))
         chosen_pattern = pattern_list[pattern_index]
 
-        # number of notes that fit 
+        # Number of notes that fit in this chord event
         num_notes = int(chord_duration / duration)
 
-        # chord root to number
+        # Convert chord root pitch name (e.g. "c4") to a pitch number
         root_pitch = pqh.pitch_name_to_pitch(chord_root)
 
         for j in range(num_notes):
-            # pattern index
+            # Index into the chosen pattern
             pattern_idx = j % len(chosen_pattern)
-            
-            # adding pattern offset to root pitch
             note_pitch = root_pitch + chosen_pattern[pattern_idx]
-            
-            # onset time in beats
+
+            # The onset in *beats* for this note
             note_onset_beat = current_beat + j * duration
-            
-            # beats to seconds
-            note_onset_sec = note_onset_beat * seconds_per_beat
+
+            # Convert the note's duration from beats to seconds for the 'duration' kwarg
             note_duration_sec = duration * seconds_per_beat
-            
-            event = (note_onset_sec, inst, {"duration": note_duration_sec, "pitch": note_pitch})
+
+            # Store the onset as beats in the event tuple, not seconds
+            event = (
+                note_onset_beat,     # <-- in beats
+                inst,
+                {
+                    "duration": note_duration_sec,  # in seconds
+                    "pitch": note_pitch
+                }
+            )
             score.append(event)
-        
+
+        # Advance the current beat by the chord's total duration (in beats)
         current_beat += chord_duration
-
     return score
-
 
 
 

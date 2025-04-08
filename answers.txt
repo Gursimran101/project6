@@ -26,7 +26,14 @@ Project feedback and pain points:
     helper functions that I didn't fully understand but thought would work. 
 
 - Providing a bit more troubleshooting would be helpful - I spent several hours 
-    dealing with a "module does not exist" 
+    dealing with a "module does not exist" error and ended up having to completely 
+    reset my virtual environment and reinstall everything. 
+
+- I think providing test cases from the autograder - all of them or just the basic
+    ones, would be extremely helpful so we don't have to go completely submit the
+    entire project to get autograder feedback. Also making the autograder feedback 
+    more thorough/verbose/provide suggestions for where to start debugging. 
+
 
 
 Time spent per task:
