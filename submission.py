@@ -251,91 +251,44 @@ def get_harmonic_envelopes(audio: pq.Audio, num_harmonics: int = 8, hop_length: 
     return [Envelope(times, values) for values in envelopes]
 
 
-
-# def part2_harmonic_inst(duration: float, pitch: float, harmonic_envs: List[Envelope],
-#                         overall_env: Envelope = None, sample_rate: int = 44100) -> pq.Audio:
-#     """Generates harmonics via sine waves at the requested pitch and sample_rate,
-#     for the duration in seconds, with zero phase offset, shaped by the provided envelopes.
-#     The number of harmonics generated matches the length of the envelopes passed in.
-#     The final audio is then shaped with the optional provided overall_env, as in part2_inst.
-
-
-#     For durations which do not evenly combine with sample_rate, floor the
-#     resulting product.
-    
-#     Returns: The generated signal.
-#     """
-
-#     assert len(harmonic_envs) > 0, "At least one harmonic envelope must be provided"
-
-#     # pitch to frequency
-#     freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
-
-#     n_samples = int(np.floor(duration * sample_rate))
-    
-#     # time array 
-#     t = np.arange(n_samples) / sample_rate
-
-#     # initialize waveform
-#     total_wave = np.zeros(n_samples, dtype=float)
-
-#     # compute the sine wave at (i+1)*freq and modulate by the corresponding envelope.
-#     for i, env in enumerate(harmonic_envs):
-#         harmonic_freq = (i + 1) * freq_base
-#         wave = np.sin(2 * np.pi * harmonic_freq * t)
-#         wave *= env(t)
-#         total_wave += wave
-
-#     if overall_env is not None:
-#         total_wave *= overall_env(t)
-
-#     return pq.Audio.from_array(total_wave, sample_rate=sample_rate)
-
 def part2_harmonic_inst(duration: float,
                         pitch: float,
                         harmonic_envs: List[Envelope],
                         overall_env: Envelope = None,
                         sample_rate: int = 44100) -> pq.Audio:
     """
-    Generates multiple sine waves at integer multiples of pitch's base frequency,
-    each shaped by its corresponding harmonic envelope from harmonic_envs.
-    The final audio is optionally shaped by overall_env if provided.
-    This implementation normalizes the sum by dividing by the number of harmonics.
+    Generates harmonics via sine waves at the requested pitch and sample_rate,
+    for the duration in seconds, with zero phase offset, shaped by the provided envelopes.
+    The number of harmonics generated matches the length of the envelopes passed in.
+    The final audio is then shaped with the optional provided overall_env, as in part2_inst.
     """
-    import numpy as np
 
-    # Convert pitch to a base frequency using the standard MIDI formula.
+    # pitch to freq
     freq_base = 440.0 * 2 ** ((pitch - 69.0) / 12.0)
 
-    # Determine the number of samples and create the time array.
-    n_samples = int(duration * sample_rate)
-    t = np.linspace(0.0, duration, n_samples, endpoint=False)
-
-    # Sum up each harmonic's sine wave, weighted by its envelope.
-    total_wave = np.zeros(n_samples, dtype=float)
-    n_harmonics = len(harmonic_envs)
+    n_samples = int(np.floor(duration * sample_rate))
     
+    # time array
+    t = np.arange(n_samples) / sample_rate
+
+    # init waveform
+    total_wave = np.zeros(n_samples, dtype=float)
+
+    # generate sine wave for each harmonic, modulate with envelope.
     for i, env in enumerate(harmonic_envs):
-        # Each harmonic's frequency is (i+1) times the base frequency.
-        freq = (i + 1) * freq_base
-        wave = np.sin(2 * np.pi * freq * t)
-        # Multiply by the envelope for this harmonic.
-        env_vals = env(t)
-        # Ensure the envelope values are a one-dimensional array.
-        env_vals = env_vals.flatten()
+        harmonic_freq = (i + 1) * freq_base
+        wave = np.sin(2 * np.pi * harmonic_freq * t)
+        # Evaluate the envelope (make sure it's 1D)
+        env_vals = env(t).flatten()
         wave *= env_vals
         total_wave += wave
 
-    # Normalize the total wave by the number of harmonics.
-    if n_harmonics > 0:
-        total_wave /= n_harmonics
-
-    # Optionally, apply the overall envelope if one is provided.
     if overall_env is not None:
         total_wave *= overall_env(t)
 
-    return pq.Audio.from_array(total_wave, sample_rate=sample_rate)
+    total_wave = 0.4 * total_wave
 
+    return pq.Audio.from_array(total_wave, sample_rate=sample_rate)
 
 
 def part2_harmonic_score(times: np.ndarray,
