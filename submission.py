@@ -440,12 +440,11 @@ def part4_rand(rhythm: np.ndarray,
     assert all([x % duration == 0 for x in rhythm]), "Duration must evenly divide rhythms"
     assert len(rhythm) == len(chords), "Chords and rhythm must have same length"
     
-    # seconds per beat from BPM
+    
     seconds_per_beat = 60.0 / metronome.bpm
     
     score = []
     current_beat = 0.0 
-
 
     for chord_event, chord_duration in zip(chords, rhythm):
         chord_root, chord_type = chord_event
@@ -462,20 +461,27 @@ def part4_rand(rhythm: np.ndarray,
         root_pitch = pqh.pitch_name_to_pitch(chord_root)
 
         for j in range(num_notes):
-            note_pitch = root_pitch + chosen_pattern[j % len(chosen_pattern)]
-            # onset (beats) for note
+            # pattern index
+            pattern_idx = j % len(chosen_pattern)
+            
+            # adding pattern offset to root pitch
+            note_pitch = root_pitch + chosen_pattern[pattern_idx]
+            
+            # onset time in beats
             note_onset_beat = current_beat + j * duration
-
-            # onset and duration to seconds 
+            
+            # beats to seconds
             note_onset_sec = note_onset_beat * seconds_per_beat
             note_duration_sec = duration * seconds_per_beat
-
+            
             event = (note_onset_sec, inst, {"duration": note_duration_sec, "pitch": note_pitch})
             score.append(event)
         
         current_beat += chord_duration
 
     return score
+
+
 
 
 
